@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, Branch } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, GraduationCap, UserPlus, Mail, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, GraduationCap, UserPlus } from 'lucide-react';
 
 const branches: Branch[] = ['CSE', 'EEE', 'Mechanical', 'ECE', 'Civil'];
 
@@ -24,9 +24,9 @@ export default function Register() {
   const [branch, setBranch] = useState<Branch | ''>('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
   const { register } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,13 +55,11 @@ export default function Register() {
       const result = await register(name, email, password, branch);
       
       if (result.success) {
-        if (result.needsVerification) {
-          setEmailSent(true);
-          toast({
-            title: 'Verification email sent!',
-            description: 'Please check your inbox and click the link to verify your email.',
-          });
-        }
+        toast({
+          title: 'Account created!',
+          description: 'Welcome to N-HANCE.',
+        });
+        navigate('/home');
       } else {
         toast({
           title: 'Registration failed',
@@ -79,51 +77,6 @@ export default function Register() {
       setIsLoading(false);
     }
   };
-
-  if (emailSent) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md text-center"
-        >
-          <div className="mb-8">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <Mail className="h-8 w-8 text-primary" />
-            </div>
-          </div>
-          
-          <div className="rounded-lg border border-border bg-card p-8 shadow-card">
-            <CheckCircle className="mx-auto mb-4 h-12 w-12 text-green-500" />
-            <h1 className="font-serif text-2xl font-bold">Check your email</h1>
-            <p className="mt-3 text-muted-foreground">
-              We've sent a verification link to <span className="font-medium text-foreground">{email}</span>
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Click the link in the email to verify your account and complete registration.
-            </p>
-            
-            <div className="mt-6 space-y-3">
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => setEmailSent(false)}
-              >
-                Use a different email
-              </Button>
-              <Link to="/login" className="block">
-                <Button variant="ghost" className="w-full">
-                  Back to Sign In
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
@@ -172,9 +125,6 @@ export default function Register() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                You'll need to verify this email to complete registration
-              </p>
             </div>
 
             <div className="space-y-2">
