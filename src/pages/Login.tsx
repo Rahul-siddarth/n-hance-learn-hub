@@ -22,8 +22,8 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
+      const result = await login(email, password);
+      if (result.success) {
         toast({
           title: 'Welcome back!',
           description: 'You have successfully logged in.',
@@ -32,14 +32,14 @@ export default function Login() {
       } else {
         toast({
           title: 'Login failed',
-          description: 'Invalid email or password. Please try again.',
+          description: result.error || 'Invalid email or password. Please try again.',
           variant: 'destructive',
         });
       }
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'An error occurred. Please try again.',
+        description: 'An unexpected error occurred. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -124,10 +124,6 @@ export default function Login() {
             </Link>
           </div>
         </motion.div>
-
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          Demo admin: admin@nhance.edu / admin123
-        </p>
       </motion.div>
     </div>
   );
