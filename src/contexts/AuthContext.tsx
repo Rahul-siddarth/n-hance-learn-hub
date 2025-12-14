@@ -24,7 +24,7 @@ interface AuthContextType {
   user: AuthUser | null;
   session: Session | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, password: string, branch: Branch) => Promise<{ success: boolean; needsVerification?: boolean; error?: string }>;
+  register: (name: string, email: string, password: string, branch: Branch) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -101,10 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      if (error.message.includes('Email not confirmed')) {
-        return { success: false, error: 'Please verify your email before signing in. Check your inbox for the confirmation link.' };
-      }
-      return { success: false, error: error.message };
+      // Generic error message for security (don't reveal if email exists)
+      return { success: false, error: 'Invalid email or password.' };
     }
 
     if (data.user) {
@@ -121,14 +119,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string, 
     password: string, 
     branch: Branch
-  ): Promise<{ success: boolean; needsVerification?: boolean; error?: string }> => {
-    const redirectUrl = `${window.location.origin}/`;
-
+  ): Promise<{ success: boolean; error?: string }> => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
         data: {
           name,
           branch,
@@ -138,18 +133,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      if (error.message.includes('already registered')) {
+      if (error.message.includes('already registered') || error.message.includes('User already registered')) {
         return { success: false, error: 'An account with this email already exists.' };
       }
       return { success: false, error: error.message };
     }
 
-    // Check if email confirmation is required
-    if (data.user && !data.session) {
-      return { success: true, needsVerification: true };
+    if (data.user && data.session) {
+      const authUser = await fetchProfile(data.user.id, data.user.email || '');
+      setUser(authUser);
+      return { success: true };
     }
 
-    return { success: true };
+    return { success: false, error: 'Registration failed. Please try again.' };
   };
 
   const logout = async () => {
