@@ -1,188 +1,95 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { User, Session } from '@supabase/supabase-js';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export type Branch = 'CSE' | 'EEE' | 'Mechanical' | 'ECE' | 'Civil';
 
-interface Profile {
-  id: string;
-  user_id: string;
-  name: string;
-  branch: Branch;
-  is_admin: boolean;
-}
-
-interface AuthUser {
+interface User {
   id: string;
   name: string;
   email: string;
   branch: Branch;
-  isAdmin: boolean;
+  isAdmin?: boolean;
 }
 
 interface AuthContextType {
-  user: AuthUser | null;
-  session: Session | null;
-  login: (email: string, passcode: string) => Promise<{ success: boolean; error?: string }>;
-  register: (
-    name: string,
-    email: string,
-    passcode: string,
-    branch: Branch
-  ) => Promise<{ success: boolean; error?: string }>;
-  logout: () => Promise<void>;
+  user: User | null;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string, branch: Branch) => Promise<boolean>;
+  logout: () => void;
   isAuthenticated: boolean;
-  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(() => {
+    const stored = localStorage.getItem('nhance_user');
+    return stored ? JSON.parse(stored) : null;
+  });
 
-  const fetchProfile = async (userId: string, email: string): Promise<AuthUser | null> => {
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (error || !profile) {
-      console.error('Error fetching profile:', error);
-      return null;
-    }
-
-    return {
-      id: userId,
-      name: profile.name,
-      email: email,
-      branch: profile.branch as Branch,
-      isAdmin: profile.is_admin,
-    };
-  };
-
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        
-        if (session?.user) {
-          // Defer profile fetch with setTimeout to avoid deadlock
-          setTimeout(async () => {
-            const authUser = await fetchProfile(session.user.id, session.user.email || '');
-            setUser(authUser);
-            setIsLoading(false);
-          }, 0);
-        } else {
-          setUser(null);
-          setIsLoading(false);
-        }
-      }
+  const login = async (email: string, password: string): Promise<boolean> => {
+    // Simulate login - in production, this would call an API
+    const storedUsers = JSON.parse(localStorage.getItem('nhance_users') || '[]');
+    const foundUser = storedUsers.find((u: User & { password: string }) => 
+      u.email === email && u.password === password
     );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        fetchProfile(session.user.id, session.user.email || '').then((authUser) => {
-          setUser(authUser);
-          setIsLoading(false);
-        });
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const login = async (email: string, passcode: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: passcode,
-      });
-
-      if (error) {
-        // Generic error message for security (don't reveal if email exists)
-        return { success: false, error: 'Invalid email or passcode.' };
-      }
-
-      if (data.user) {
-        const authUser = await fetchProfile(data.user.id, data.user.email || '');
-        setUser(authUser);
-        return { success: true };
-      }
-
-      return { success: false, error: 'Sign in failed. Please try again.' };
-    } catch (err) {
-      return { success: false, error: 'Connection error. Please check your internet and try again.' };
+    
+    if (foundUser) {
+      const { password: _, ...userWithoutPassword } = foundUser;
+      setUser(userWithoutPassword);
+      localStorage.setItem('nhance_user', JSON.stringify(userWithoutPassword));
+      return true;
     }
+    
+    // Demo admin account
+    if (email === 'admin@nhance.edu' && password === 'admin123') {
+      const adminUser: User = {
+        id: 'admin-1',
+        name: 'Admin',
+        email: 'admin@nhance.edu',
+        branch: 'CSE',
+        isAdmin: true,
+      };
+      setUser(adminUser);
+      localStorage.setItem('nhance_user', JSON.stringify(adminUser));
+      return true;
+    }
+    
+    return false;
   };
 
-  const register = async (
-    name: string, 
-    email: string, 
-    passcode: string, 
-    branch: Branch
-  ): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password: passcode,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            name: name.trim(),
-            branch,
-            is_admin: false,
-          },
-        },
-      });
-
-      if (error) {
-        if (error.message.includes('already registered') || error.message.includes('User already registered')) {
-          return { success: false, error: 'An account with this email already exists. Please sign in instead.' };
-        }
-        return { success: false, error: error.message };
-      }
-
-      if (data.user && data.session) {
-        const authUser = await fetchProfile(data.user.id, data.user.email || '');
-        setUser(authUser);
-        return { success: true };
-      }
-
-      // User created but no session - might be due to email confirmation being required
-      if (data.user && !data.session) {
-        return { success: false, error: 'Account created but sign-in failed. Please try logging in.' };
-      }
-
-      return { success: false, error: 'Registration failed. Please try again.' };
-    } catch (err) {
-      return { success: false, error: 'Connection error. Please check your internet and try again.' };
+  const register = async (name: string, email: string, password: string, branch: Branch): Promise<boolean> => {
+    const storedUsers = JSON.parse(localStorage.getItem('nhance_users') || '[]');
+    
+    if (storedUsers.some((u: User) => u.email === email)) {
+      return false;
     }
+    
+    const newUser = {
+      id: `user-${Date.now()}`,
+      name,
+      email,
+      password,
+      branch,
+      isAdmin: false,
+    };
+    
+    storedUsers.push(newUser);
+    localStorage.setItem('nhance_users', JSON.stringify(storedUsers));
+    
+    const { password: _, ...userWithoutPassword } = newUser;
+    setUser(userWithoutPassword);
+    localStorage.setItem('nhance_user', JSON.stringify(userWithoutPassword));
+    
+    return true;
   };
 
-  const logout = async () => {
-    await supabase.auth.signOut();
+  const logout = () => {
     setUser(null);
-    setSession(null);
+    localStorage.removeItem('nhance_user');
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session,
-      login, 
-      register, 
-      logout, 
-      isAuthenticated: !!user,
-      isLoading 
-    }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

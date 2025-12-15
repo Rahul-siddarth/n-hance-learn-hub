@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, GraduationCap } from 'lucide-react';
 
 export default function Landing() {
   return (
@@ -19,7 +19,7 @@ export default function Landing() {
           className="mb-6 flex justify-center"
         >
           <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-carbon shadow-soft">
-            <BookOpen className="h-10 w-10 text-carbon-foreground" />
+            <GraduationCap className="h-10 w-10 text-carbon-foreground" />
           </div>
         </motion.div>
 
