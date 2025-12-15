@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, Branch } from '@/contexts/AuthContext';
@@ -20,39 +20,73 @@ const branches: Branch[] = ['CSE', 'EEE', 'Mechanical', 'ECE', 'Civil'];
 export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [passcode, setPasscode] = useState('');
   const [branch, setBranch] = useState<Branch | ''>('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPasscode, setShowPasscode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const isSubmitting = useRef(false);
   const { register } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Prevent duplicate submissions
+    if (isSubmitting.current || isLoading) {
+      return;
+    }
+
+    // Validate name
+    if (!name.trim()) {
+      toast({
+        title: 'Name required',
+        description: 'Please enter your full name.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      toast({
+        title: 'Invalid email',
+        description: 'Please enter a valid email address.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Validate branch
     if (!branch) {
       toast({
-        title: 'Please select a branch',
-        description: 'You must select your branch to continue.',
+        title: 'Branch required',
+        description: 'Please select your branch to continue.',
         variant: 'destructive',
       });
       return;
     }
 
-    if (password.length < 6) {
+    // Validate passcode
+    if (passcode.length < 6) {
       toast({
-        title: 'Password too short',
-        description: 'Password must be at least 6 characters.',
+        title: 'Passcode too short',
+        description: 'Passcode must be at least 6 characters.',
         variant: 'destructive',
       });
       return;
     }
 
+    isSubmitting.current = true;
     setIsLoading(true);
 
     try {
-      const result = await register(name, email, password, branch);
+      const result = await register(name.trim(), email.trim().toLowerCase(), passcode, branch);
       
       if (result.success) {
         toast({
@@ -75,6 +109,7 @@ export default function Register() {
       });
     } finally {
       setIsLoading(false);
+      isSubmitting.current = false;
     }
   };
 
@@ -92,8 +127,8 @@ export default function Register() {
               <GraduationCap className="h-6 w-6 text-carbon-foreground" />
             </div>
           </Link>
-          <h1 className="mt-4 font-serif text-3xl font-bold tracking-tight">Get Started</h1>
-          <p className="mt-2 text-muted-foreground">Create your account to begin learning</p>
+          <h1 className="mt-4 font-serif text-3xl font-bold tracking-tight">Create Account</h1>
+          <p className="mt-2 text-muted-foreground">Sign up to start your learning journey</p>
         </div>
 
         <motion.div
@@ -108,50 +143,59 @@ export default function Register() {
               <Input
                 id="name"
                 type="text"
-                placeholder="John Doe"
+                placeholder="Enter your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@university.edu"
+                placeholder="your.email@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="passcode">Account Passcode</Label>
               <div className="relative">
                 <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Create a strong password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  id="passcode"
+                  type={showPasscode ? 'text' : 'password'}
+                  placeholder="Create a passcode (min 6 characters)"
+                  value={passcode}
+                  onChange={(e) => setPasscode(e.target.value)}
                   required
                   minLength={6}
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowPasscode(!showPasscode)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  disabled={isLoading}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPasscode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <p className="text-xs text-muted-foreground">This will be your login passcode</p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="branch">Branch</Label>
-              <Select value={branch} onValueChange={(value) => setBranch(value as Branch)}>
+              <Select 
+                value={branch} 
+                onValueChange={(value) => setBranch(value as Branch)}
+                disabled={isLoading}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select your branch" />
                 </SelectTrigger>

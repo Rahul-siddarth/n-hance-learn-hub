@@ -94,58 +94,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const login = async (email: string, passcode: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password: passcode,
+      });
 
-    if (error) {
-      // Generic error message for security (don't reveal if email exists)
-      return { success: false, error: 'Invalid email or password.' };
+      if (error) {
+        // Generic error message for security (don't reveal if email exists)
+        return { success: false, error: 'Invalid email or passcode.' };
+      }
+
+      if (data.user) {
+        const authUser = await fetchProfile(data.user.id, data.user.email || '');
+        setUser(authUser);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Sign in failed. Please try again.' };
+    } catch (err) {
+      return { success: false, error: 'Connection error. Please check your internet and try again.' };
     }
-
-    if (data.user) {
-      const authUser = await fetchProfile(data.user.id, data.user.email || '');
-      setUser(authUser);
-      return { success: true };
-    }
-
-    return { success: false, error: 'Login failed' };
   };
 
   const register = async (
     name: string, 
     email: string, 
-    password: string, 
+    passcode: string, 
     branch: Branch
   ): Promise<{ success: boolean; error?: string }> => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          branch,
-          is_admin: false,
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password: passcode,
+        options: {
+          data: {
+            name: name.trim(),
+            branch,
+            is_admin: false,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      if (error.message.includes('already registered') || error.message.includes('User already registered')) {
-        return { success: false, error: 'An account with this email already exists.' };
+      if (error) {
+        if (error.message.includes('already registered') || error.message.includes('User already registered')) {
+          return { success: false, error: 'An account with this email already exists. Please sign in instead.' };
+        }
+        return { success: false, error: error.message };
       }
-      return { success: false, error: error.message };
-    }
 
-    if (data.user && data.session) {
-      const authUser = await fetchProfile(data.user.id, data.user.email || '');
-      setUser(authUser);
-      return { success: true };
-    }
+      if (data.user && data.session) {
+        const authUser = await fetchProfile(data.user.id, data.user.email || '');
+        setUser(authUser);
+        return { success: true };
+      }
 
-    return { success: false, error: 'Registration failed. Please try again.' };
+      // User created but no session - might be due to email confirmation being required
+      if (data.user && !data.session) {
+        return { success: false, error: 'Account created but sign-in failed. Please try logging in.' };
+      }
+
+      return { success: false, error: 'Registration failed. Please try again.' };
+    } catch (err) {
+      return { success: false, error: 'Connection error. Please check your internet and try again.' };
+    }
   };
 
   const logout = async () => {
