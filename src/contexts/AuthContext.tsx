@@ -23,8 +23,13 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   session: Session | null;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, password: string, branch: Branch) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, passcode: string) => Promise<{ success: boolean; error?: string }>;
+  register: (
+    name: string,
+    email: string,
+    passcode: string,
+    branch: Branch
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -129,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: email.trim().toLowerCase(),
         password: passcode,
         options: {
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             name: name.trim(),
             branch,
