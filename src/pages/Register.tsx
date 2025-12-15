@@ -36,14 +36,18 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Prevent duplicate submissions
     if (isSubmitting.current || isLoading) {
       return;
     }
 
+    // Lock immediately to avoid rapid double-clicks firing multiple requests
+    isSubmitting.current = true;
+
     // Validate name
     if (!name.trim()) {
+      isSubmitting.current = false;
       toast({
         title: 'Name required',
         description: 'Please enter your full name.',
@@ -54,6 +58,7 @@ export default function Register() {
 
     // Validate email format
     if (!validateEmail(email)) {
+      isSubmitting.current = false;
       toast({
         title: 'Invalid email',
         description: 'Please enter a valid email address.',
@@ -61,9 +66,10 @@ export default function Register() {
       });
       return;
     }
-    
+
     // Validate branch
     if (!branch) {
+      isSubmitting.current = false;
       toast({
         title: 'Branch required',
         description: 'Please select your branch to continue.',
@@ -74,6 +80,7 @@ export default function Register() {
 
     // Validate passcode
     if (passcode.length < 6) {
+      isSubmitting.current = false;
       toast({
         title: 'Passcode too short',
         description: 'Passcode must be at least 6 characters.',
@@ -82,9 +89,7 @@ export default function Register() {
       return;
     }
 
-    isSubmitting.current = true;
     setIsLoading(true);
-
     try {
       const result = await register(name.trim(), email.trim().toLowerCase(), passcode, branch);
       
@@ -199,7 +204,7 @@ export default function Register() {
                 <SelectTrigger>
                   <SelectValue placeholder="Select your branch" />
                 </SelectTrigger>
-                <SelectContent className="bg-card">
+                <SelectContent className="bg-card z-50">
                   {branches.map((b) => (
                     <SelectItem key={b} value={b}>
                       {b === 'CSE' && 'Computer Science & Engineering'}
