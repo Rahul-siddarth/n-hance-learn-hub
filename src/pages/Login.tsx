@@ -21,30 +21,23 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      const success = await login(email, password);
-      if (success) {
-        toast({
-          title: 'Welcome back!',
-          description: 'You have successfully logged in.',
-        });
-        navigate('/home');
-      } else {
-        toast({
-          title: 'Login failed',
-          description: 'Invalid email or password. Please try again.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
+    const result = await login(email, password);
+    
+    if (result.success) {
       toast({
-        title: 'Error',
-        description: 'An error occurred. Please try again.',
+        title: 'Welcome back!',
+        description: 'You have successfully logged in.',
+      });
+      navigate('/home');
+    } else {
+      toast({
+        title: 'Login failed',
+        description: result.error || 'Invalid email or passcode. Please try again.',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -125,9 +118,6 @@ export default function Login() {
           </div>
         </motion.div>
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          Demo admin: admin@nhance.edu / admin123
-        </p>
       </motion.div>
     </div>
   );

@@ -42,30 +42,23 @@ export default function Register() {
 
     setIsLoading(true);
 
-    try {
-      const success = await register(name, email, password, branch);
-      if (success) {
-        toast({
-          title: 'Welcome to N-HANCE!',
-          description: 'Your account has been created successfully.',
-        });
-        navigate('/home');
-      } else {
-        toast({
-          title: 'Registration failed',
-          description: 'An account with this email already exists.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
+    const result = await register(name, email, password, branch);
+    
+    if (result.success) {
       toast({
-        title: 'Error',
-        description: 'An error occurred. Please try again.',
+        title: 'Welcome to N-HANCE!',
+        description: 'Your account has been created successfully.',
+      });
+      navigate('/home');
+    } else {
+      toast({
+        title: 'Registration failed',
+        description: result.error || 'An account with this email already exists.',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
+    
+    setIsLoading(false);
   };
 
   return (
