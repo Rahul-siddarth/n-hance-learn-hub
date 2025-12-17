@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      materials: {
+        Row: {
+          branch: string
+          created_at: string
+          description: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          module_id: string
+          module_name: string
+          semester: number
+          subject_id: string
+          subject_name: string
+          title: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          branch: string
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          module_id: string
+          module_name: string
+          semester: number
+          subject_id: string
+          subject_name: string
+          title: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          branch?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          module_id?: string
+          module_name?: string
+          semester?: number
+          subject_id?: string
+          subject_name?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           branch: string
@@ -41,6 +95,54 @@ export type Database = {
           name?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      reference_books: {
+        Row: {
+          author: string
+          branch: string
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          semester: number
+          subject_id: string
+          subject_name: string
+          title: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          author: string
+          branch: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          semester: number
+          subject_id: string
+          subject_name: string
+          title: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          author?: string
+          branch?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          semester?: number
+          subject_id?: string
+          subject_name?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
         }
         Relationships: []
       }
