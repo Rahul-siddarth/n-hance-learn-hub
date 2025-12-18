@@ -244,9 +244,28 @@ export default function AdminPanel() {
     }
   };
 
-  const getFileUrl = (bucket: string, filePath: string) => {
-    const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
-    return data.publicUrl;
+  const getSignedUrl = async (bucket: string, filePath: string): Promise<string | null> => {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+    if (error) {
+      console.error('Error creating signed URL:', error);
+      return null;
+    }
+    return data.signedUrl;
+  };
+
+  const handleDownload = async (bucket: string, filePath: string) => {
+    const url = await getSignedUrl(bucket, filePath);
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      toast({
+        title: 'Download failed',
+        description: 'Could not generate download link.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const formatFileSize = (bytes: number | null) => {
@@ -540,15 +559,9 @@ export default function AdminPanel() {
                         <Button
                           variant="outline"
                           size="sm"
-                          asChild
+                          onClick={() => handleDownload(item.type === 'material' ? 'materials' : 'references', item.file_path)}
                         >
-                          <a 
-                            href={getFileUrl(item.type === 'material' ? 'materials' : 'references', item.file_path)} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                          >
-                            <Download className="h-4 w-4" />
-                          </a>
+                          <Download className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="destructive"
